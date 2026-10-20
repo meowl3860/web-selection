@@ -1,0 +1,56 @@
+{
+  "name": "web-selection",
+  "version": "0.1.0",
+  "description": "Photoshop-style selection on any web page: magic wand, marquee, lasso, brush and text, with add, subtract and intersect.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meowl3860/web-selection.git"
+  },
+  "homepage": "https://github.com/meowl3860/web-selection#readme",
+  "bugs": {
+    "url": "https://github.com/meowl3860/web-selection/issues"
+  },
+  "keywords": [
+    "selection",
+    "magic-wand",
+    "lasso",
+    "marquee",
+    "dom",
+    "annotation",
+    "shadow-dom"
+  ],
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/web-selection.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --mode lib && vite build --mode iife && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "check": "npm run typecheck && npm run test && npm run build && npm run e2e",
+    "shots": "node scripts/shoot.mjs shots",
+    "real": "node scripts/real.mjs real-shots",
+    "icons": "node scripts/icons.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
