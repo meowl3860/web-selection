@@ -2,8 +2,9 @@
 // for one index and stays readable after the page changes, though its ranges are live DOM
 // ranges and follow the page.
 
-import { size, type IntervalSet } from "./intervals.js";
+import type { IntervalSet } from "./intervals.js";
 import type { Block, BlockKind, PageIndex, Piece } from "./page.js";
+import { nearby, titlePath } from "./smart.js";
 
 export interface Part {
   /** The block element: a paragraph, list item, cell, picture and so on. */
@@ -13,6 +14,15 @@ export interface Part {
   whole: boolean;
   text: string;
   range: Range;
+}
+
+export interface Context {
+  /** The headings above the selection, outermost first. */
+  titles: string[];
+  /** The running text just before the selection, in the same section. */
+  before: string;
+  /** The running text just after the selection, in the same section. */
+  after: string;
 }
 
 export interface Stats {
@@ -53,7 +63,7 @@ export class SelectionSnapshot {
       const last = pieces[pieces.length - 1]!;
       const range = index.rangeOf([first.atom.start + first.from, last.atom.start + last.to]);
       if (!range) continue;
-      const whole = size(block.span) === pieces.reduce((n, p) => n + p.to - p.from, 0);
+      const whole = index.covers(this.set, block.span);
       if (!text && block.kind !== "media") continue;
       out.push({ block: block.el, kind: block.kind, whole, text, range });
     }
@@ -90,6 +100,26 @@ export class SelectionSnapshot {
       out += p.kind === "list-item" && p.whole ? bullet(p.block) + p.text : p.text;
     });
     return out;
+  }
+
+  /**
+   * Where the selection sits: the titles above it, outermost first, and the running text just
+   * before and after it in the same section. A tool that explains the selection can send this
+   * along, so the answer knows the topic without the whole page.
+   */
+  context(maxChars = 600): Context {
+    const index = this.index;
+    const blocks = index ? index.blocksOf(this.set) : [];
+    if (!index || !blocks.length) return { titles: [], before: "", after: "" };
+    const skip = new Set(blocks);
+    const text = (b: Block | null) => (b ? textOf(b, index.pieces(b.span)) : "");
+    const before = text(nearby(index, blocks[0]!, -1, skip));
+    const after = text(nearby(index, blocks[blocks.length - 1]!, 1, skip));
+    return {
+      titles: titlePath(index, blocks[0]!).map((h) => text(h)),
+      before: before.length > maxChars ? "…" + before.slice(-maxChars) : before,
+      after: after.length > maxChars ? after.slice(0, maxChars) + "…" : after,
+    };
   }
 
   get stats(): Stats {

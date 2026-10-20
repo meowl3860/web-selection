@@ -7,13 +7,14 @@ import { blockAtPoint, caretAt, Hits } from "./core/hit.js";
 import { combine, equals, normalize, subtract, union, type Interval, type IntervalSet, type Mode } from "./core/intervals.js";
 import { PageIndex, type Block } from "./core/page.js";
 import { SelectionSnapshot } from "./core/snapshot.js";
+import { Smart, type Reach } from "./core/smart.js";
 import { spanOfBlocks, Wand } from "./core/wand.js";
 import { cursorFor, type Tool } from "./view/cursors.js";
 import { Overlay } from "./view/overlay.js";
 import { Palette } from "./view/palette.js";
 import { Measure, regionOf, type Region } from "./view/region.js";
 
-export type { Mode, Tool };
+export type { Mode, Reach, Tool };
 export type View = "ants" | "mask";
 
 export type Command =
@@ -24,6 +25,12 @@ export interface Settings {
   tool: Tool;
   /** The mode a plain click uses. Shift, Alt and Shift+Alt override it for one gesture. */
   mode: Mode;
+  /**
+   * Smart select: "part" takes the part under the pointer with what belongs to it, such as a
+   * list with its lead-in or a picture with its caption; "section" takes the whole section
+   * under the nearest title. Either way, a click inside the selection grows it to the section.
+   */
+  reach: Reach;
   /** Magic wand: how alike blocks must look, 0 to 100. */
   tolerance: number;
   /** Magic wand: only the run around the click, or every alike block on the page. */
@@ -83,8 +90,9 @@ export interface WebSelection {
 }
 
 const DEFAULTS: Settings = {
-  tool: "wand",
+  tool: "smart",
   mode: "new",
+  reach: "part",
   tolerance: 20,
   contiguous: true,
   wholeBlocks: false,
@@ -94,7 +102,7 @@ const DEFAULTS: Settings = {
 };
 
 type Gesture =
-  | { tool: "wand"; mode: Mode; start: Point; moved: boolean }
+  | { tool: "wand" | "smart"; mode: Mode; start: Point; moved: boolean }
   | { tool: "marquee"; mode: Mode; start: Point; end: Point; hits: Hits; region: IntervalSet }
   | { tool: "lasso"; mode: Mode; points: Point[]; hits: Hits; region: IntervalSet }
   | { tool: "brush"; mode: Mode; base: IntervalSet; painted: Set<Block>; exact: IntervalSet; last: Point; hits: Hits }
@@ -118,6 +126,7 @@ class Controller implements WebSelection {
 
   private index: PageIndex | null = null;
   private wand: Wand | null = null;
+  private smart: Smart | null = null;
   private version = 0;
   private dirty = true;
   private rebuildTimer = 0;
@@ -325,6 +334,7 @@ class Controller implements WebSelection {
       // Changes inside shadow roots do not reach an observer on the page, so watch each root.
       for (const r of this.index.shadowRoots) this.watch?.(r);
       this.wand = new Wand(this.index);
+      this.smart = new Smart(this.index);
       this.dirty = false;
       this.previewKey = "";
       // A page that changes all the time gets rebuilt less often.
@@ -502,7 +512,8 @@ class Controller implements WebSelection {
     this.clearPreview();
     switch (this.state.tool) {
       case "wand":
-        this.gesture = { tool: "wand", mode, start: [e.clientX, e.clientY], moved: false };
+      case "smart":
+        this.gesture = { tool: this.state.tool, mode, start: [e.clientX, e.clientY], moved: false };
         break;
       case "marquee":
         this.gesture = { tool: "marquee", mode, start: p, end: p, hits: hits(), region: [] };
@@ -548,6 +559,7 @@ class Controller implements WebSelection {
     const p = this.local(x, y);
     switch (g.tool) {
       case "wand":
+      case "smart":
         if (Math.hypot(x - g.start[0], y - g.start[1]) > 4) g.moved = true;
         break;
       case "marquee": {
@@ -617,11 +629,14 @@ class Controller implements WebSelection {
     this.stopAutoscroll();
     const cur = this.currentSet();
     switch (g.tool) {
-      case "wand": {
+      case "wand":
+      case "smart": {
         if (g.moved) break;
         const block = blockAtPoint(this.ensureIndex(), e.clientX, e.clientY, this.isOurs, this.shadowOf);
-        if (block) this.commit(combine(cur, spanOfBlocks(this.wand!.pick(block, this.state.tolerance, this.state.contiguous)), g.mode));
-        else if (g.mode === "new") this.commit([]);
+        if (block) {
+          const t = this.clickTarget(block, g.mode);
+          this.commit(combine(cur, t.region, t.mode));
+        } else if (g.mode === "new") this.commit([]);
         break;
       }
       case "marquee": {
@@ -664,17 +679,34 @@ class Controller implements WebSelection {
     this.hoverAt = [x, y];
     if (!this.on_) return;
     const tool = this.state.tool;
-    if (tool === "wand") {
+    if (tool === "wand" || tool === "smart") {
       const index = this.ensureIndex();
       const block = blockAtPoint(index, x, y, this.isOurs, this.shadowOf);
-      const key = block ? `${index.version}:${block.order}:${this.state.tolerance}:${+this.state.contiguous}` : "none";
       const mode = this.modeOf(this.mods);
-      if (key !== this.previewKey || mode !== this.previewMode) {
+      const s = this.state;
+      const key = block ? `${tool}:${index.version}:${this.revision}:${block.order}:${s.tolerance}:${+s.contiguous}:${s.reach}:${mode}` : "none";
+      if (key !== this.previewKey) {
         this.previewKey = key;
-        this.setPreview(block ? spanOfBlocks(this.wand!.pick(block, this.state.tolerance, this.state.contiguous)) : [], mode);
+        const t = block ? this.clickTarget(block, mode) : null;
+        this.setPreview(t ? t.region : [], t ? t.mode : mode);
       }
     } else if (tool !== "brush") this.clearPreview();
     this.schedule();
+  }
+
+  /** What a click with the wand or smart select on `block` takes, and how it combines. */
+  private clickTarget(block: Block, mode: Mode): { region: IntervalSet; mode: Mode } {
+    if (this.state.tool === "wand") {
+      return { region: spanOfBlocks(this.wand!.pick(block, this.state.tolerance, this.state.contiguous)), mode };
+    }
+    // Smart select: a plain click inside the selection takes the section around it, under its
+    // title, and the next click the section around that.
+    const cur = this.currentSet();
+    if (mode === "new" && cur.length && this.index!.covers(cur, block.span)) {
+      const bigger = this.smart!.grow(this.index!.blocksOf(cur));
+      return bigger ? { region: spanOfBlocks(bigger), mode: "add" } : { region: [], mode: "add" };
+    }
+    return { region: spanOfBlocks(this.smart!.pick(block, this.state.reach)), mode };
   }
 
   private setPreview(set: IntervalSet, mode: Mode): void {
@@ -741,7 +773,7 @@ class Controller implements WebSelection {
     const vh = this.doc.documentElement.clientHeight;
     const g = this.gesture;
     let v = 0;
-    if (g && g.tool !== "wand") {
+    if (g && g.tool !== "wand" && g.tool !== "smart") {
       if (clientY < edge) v = -(edge - clientY);
       else if (clientY > vh - edge) v = clientY - (vh - edge);
     }
@@ -792,7 +824,7 @@ class Controller implements WebSelection {
       else if (key === "y") this.run("redo");
       else handled = false;
     } else if (!ctrl && !e.altKey) {
-      const tools: Record<string, Tool> = { w: "wand", m: "marquee", l: "lasso", b: "brush", t: "text" };
+      const tools: Record<string, Tool> = { s: "smart", w: "wand", m: "marquee", l: "lasso", b: "brush", t: "text" };
       if (tools[key]) this.set({ tool: tools[key] });
       else if (key === "q") this.set({ view: this.state.view === "ants" ? "mask" : "ants" });
       else if (key === "[" || key === "]") this.nudge(key === "]" ? 1 : -1);

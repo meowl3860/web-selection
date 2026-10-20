@@ -7,7 +7,12 @@ const output = document.getElementById("output")!;
 const toggle = document.getElementById("toggle")!;
 
 ws.on("change", (sel) => {
-  output.textContent = sel.isEmpty ? "Nothing selected yet." : sel.text();
+  if (sel.isEmpty) {
+    output.textContent = "Nothing selected yet.";
+    return;
+  }
+  const { titles } = sel.context();
+  output.textContent = (titles.length ? `Under: ${titles.join(" > ")}\n\n` : "") + sel.text();
 });
 ws.on("enabled", (on) => {
   toggle.firstChild!.textContent = on ? "Tools off " : "Tools on ";

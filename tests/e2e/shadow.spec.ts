@@ -9,6 +9,7 @@ declare global {
 async function open(page: Page) {
   await page.goto("/cards.html");
   await page.waitForFunction(() => window.ws?.enabled);
+  await page.evaluate(() => window.ws.set({ tool: "wand" }));
 }
 
 /** A point inside an element in the card's shadow root. */

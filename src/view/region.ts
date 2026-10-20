@@ -4,8 +4,9 @@
 // paragraphs reads as one area with one outline, as it would in Photoshop.
 
 import { fromDOMRect, intersectRect, outline, type Loop, type Rect } from "../core/geometry.js";
-import { flatParent } from "../core/dom.js";
-import { size, type IntervalSet } from "../core/intervals.js";
+import { flatContains, flatParent } from "../core/dom.js";
+import { hasOwnBox } from "../core/features.js";
+import { type Interval, type IntervalSet } from "../core/intervals.js";
 import type { Block, PageIndex, Piece } from "../core/page.js";
 
 const BOX_PAD = 3;
@@ -24,6 +25,8 @@ export interface Region {
 export class Measure {
   private readonly clips = new Map<Element, Rect | null>();
   private readonly pins = new Map<Element, boolean>();
+  private readonly boxes = new Map<Element, boolean>();
+  private readonly spans = new Map<Element, Interval | null>();
   readonly range: Range;
 
   constructor(
@@ -78,6 +81,18 @@ export class Measure {
     return v;
   }
 
+  boxed(el: Element): boolean {
+    let v = this.boxes.get(el);
+    if (v === undefined) this.boxes.set(el, (v = hasOwnBox(el)));
+    return v;
+  }
+
+  spanOf(index: PageIndex, el: Element): Interval | null {
+    let v = this.spans.get(el);
+    if (v === undefined) this.spans.set(el, (v = index.spanOfBox(el)));
+    return v;
+  }
+
   snap(v: number): number {
     return Math.round(v * this.dpr) / this.dpr;
   }
@@ -86,40 +101,87 @@ export class Measure {
 /** The outline loops of a selection. */
 export function regionOf(index: PageIndex, set: IntervalSet, m: Measure): Region {
   if (!set.length) return { loops: [], pinned: false };
-  const rects: Rect[] = [];
-  let pinned = false;
-  let prev: { rects: Rect[]; lh: number; endsAt: number } | null = null;
-  for (const entry of byBlock(index, set)) {
-    const { block, pieces } = entry;
-    const clip = m.clipOf(block.el);
-    if (!clip) {
-      prev = null;
-      continue;
+  const entries = [...byBlock(index, set)];
+  const whole = new Map<Block, boolean>();
+  for (const { block } of entries) whole.set(block, index.covers(set, block.span));
+  // A block counts as fully selected when it and every block inside it are whole.
+  const full = new Map<Block, boolean>();
+  const isFull = (b: Block): boolean => {
+    let v = full.get(b);
+    if (v === undefined) {
+      v = whole.get(b) === true && b.children.every(isFull);
+      full.set(b, v);
     }
-    if (m.pinned(block.el)) pinned = true;
-    const lh = block.features.lineHeight;
-    const whole = size(block.span) === pieces.reduce((n, p) => n + p.to - p.from, 0);
+    return v;
+  };
+
+  type Shape = { rects: Rect[]; lh: number; startsAt: number; endsAt: number };
+  const shapes: Shape[] = [];
+  let pinned = false;
+  for (let i = 0; i < entries.length; i++) {
+    const { block, pieces } = entries[i]!;
+    const startsAt = pieces[0]!.atom.start + pieces[0]!.from;
+    // A card or a note that is all selected is outlined by its own box.
+    const box = isFull(block) ? boxAround(index, block, set, m) : null;
+    const owner = box ?? (isFull(block) && !block.leaf ? block.el : null);
+    let j = i;
+    let lh = block.features.lineHeight;
+    if (owner) {
+      while (j + 1 < entries.length && flatContains(owner, entries[j + 1]!.block.el)) {
+        j++;
+        lh = Math.max(lh, entries[j]!.block.features.lineHeight);
+      }
+    }
+    const lastPieces = entries[j]!.pieces;
+    const last = lastPieces[lastPieces.length - 1]!;
+    const endsAt = last.atom.start + last.to;
+    const clip = m.clipOf(box ?? block.el);
+    i = j;
+    if (!clip) continue;
+    if (m.pinned(box ?? block.el)) pinned = true;
     // A little room around the text, so the outline never touches the letters.
     let own: Rect[];
-    if (block.kind === "media" || (whole && block.leaf)) {
-      const r = block.el.getBoundingClientRect();
+    if (box || block.kind === "media" || isFull(block)) {
+      const el = box ?? block.el;
+      const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) {
-        const box = m.local(r);
-        box.x0 -= markerRoom(block.el);
-        own = [grow(box, BOX_PAD, BOX_PAD)];
+        const b = m.local(r);
+        if (!box) b.x0 -= markerRoom(el);
+        own = [grow(b, BOX_PAD, BOX_PAD)];
       } else own = [];
     } else own = solidify(lineRects(pieces, m), lh).map((r) => grow(r, LINE_PAD, 0));
     own = own.map((r) => intersectRect(r, clip)).filter((r): r is Rect => !!r);
-    if (!own.length) continue;
-    const startsAt = pieces[0]!.atom.start + pieces[0]!.from;
-    // Join to the block before when the selection runs on without a break between them.
-    if (prev && sameRun(set, prev.endsAt, startsAt)) rects.push(...bridges(prev.rects, own, Math.max(prev.lh, lh)));
-    rects.push(...own);
-    const last = pieces[pieces.length - 1]!;
-    prev = { rects: own, lh, endsAt: last.atom.start + last.to };
+    if (own.length) shapes.push({ rects: own, lh, startsAt, endsAt });
   }
+
+  const rects: Rect[] = [];
+  shapes.forEach((s, k) => {
+    const prev = shapes[k - 1];
+    // Join to the shape before when the selection runs on without a break between them.
+    if (prev && sameRun(set, prev.endsAt, s.startsAt)) rects.push(...bridges(prev.rects, s.rects, Math.max(prev.lh, s.lh)));
+    rects.push(...s.rects);
+  });
   const snapped = rects.map((r) => ({ x0: m.snap(r.x0), y0: m.snap(r.y0), x1: m.snap(r.x1), y1: m.snap(r.y1) }));
   return { loops: outline(snapped), pinned };
+}
+
+const PAGE_LEVEL = new Set(["body", "html", "main", "article"]);
+/** Containers whose own box reads better than the boxes inside them, once all of it is selected. */
+const STRUCTURES = new Set(["table", "figure", "blockquote", "pre", "details", "dl", "ul", "ol"]);
+
+/**
+ * The outermost box close above a block whose whole content is selected: a box of its own,
+ * such as a card or a note, or a table, figure, quote, code block or list.
+ */
+function boxAround(index: PageIndex, block: Block, set: IntervalSet, m: Measure): Element | null {
+  let best: Element | null = null;
+  let e = flatParent(block.el);
+  for (let depth = 0; e && depth < 5 && !PAGE_LEVEL.has(e.localName); depth++, e = flatParent(e)) {
+    const span = m.spanOf(index, e);
+    if (!span || !index.covers(set, [span])) break;
+    if (STRUCTURES.has(e.localName) || m.boxed(e)) best = e;
+  }
+  return best;
 }
 
 /**

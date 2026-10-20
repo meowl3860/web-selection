@@ -72,6 +72,22 @@ for (const [name, url] of SITES) {
         const s = window.webSelection.selection;
         return { stats: s.stats, start: s.text().slice(0, 90) };
       });
+      // Smart select: the part, then the section around it after a second click.
+      await page.evaluate(() => window.webSelection.set({ tool: "smart" }));
+      await page.keyboard.press("Control+d");
+      const steps = [];
+      for (let k = 0; k < 3; k++) {
+        await page.mouse.click(box.x, box.y);
+        steps.push(await page.evaluate(() => {
+          const s = window.webSelection.selection;
+          return { blocks: s.stats.blocks, start: s.text().slice(0, 50), titles: s.context().titles.map((t) => t.slice(0, 40)) };
+        }));
+      }
+      await page.mouse.move(8, 450);
+      await page.waitForTimeout(150);
+      await page.screenshot({ path: join(out, `${name}-smart.png`) });
+      wand.smart = steps;
+      await page.evaluate(() => window.webSelection.set({ tool: "wand" }));
     }
     await page.evaluate(() => window.webSelection.run("mainText"));
     await page.evaluate(() => window.scrollTo(0, 0));

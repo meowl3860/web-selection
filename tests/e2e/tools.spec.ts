@@ -11,6 +11,7 @@ declare global {
 async function open(page: Page, path = "/") {
   await page.goto(path);
   await page.waitForFunction(() => window.ws?.enabled);
+  await page.evaluate(() => window.ws.set({ tool: "wand" }));
 }
 
 function state(page: Page): Promise<Shot> {

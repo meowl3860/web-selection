@@ -1,7 +1,8 @@
 # web-selection
 
 Photoshop-style selection for any web page.
-Click a paragraph with the magic wand, drag a marquee, draw a lasso, or paint with a brush.
+Point at a part of the page and smart select takes what belongs with it.
+Or click a paragraph with the magic wand, drag a marquee, draw a lasso, or paint with a brush.
 Shift adds, Alt subtracts, and Shift+Alt intersects, as in Photoshop.
 The result is a clean selection of blocks, text and pictures that other tools can use.
 
@@ -12,6 +13,7 @@ It has no runtime dependencies and never moves or changes the page's own nodes.
 | Photoshop | On a web page |
 |---|---|
 | Pixel | One character of text, or one picture, video or frame |
+| Object Selection, Object Finder | Smart select: point at any part to see what belongs with it, then click (see below) |
 | Magic wand | Click a block to select the blocks that look like it: kind, font, size, weight, colour, background and indent |
 | Tolerance | How alike blocks must look, from 0 (the same look) to 100 (everything) |
 | Contiguous on | Only the run of alike blocks around the click, for example one section's paragraphs |
@@ -25,7 +27,27 @@ It has no runtime dependencies and never moves or changes the page's own nodes.
 | Select Subject | Main text: the page's main article, without menus and side bars |
 | Marching ants, Quick Mask | Ants around the selection, or a red tint over everything outside it |
 
-The wand shows what a click will take while you hover, so the target is always clear.
+Smart select and the wand show what a click will take while you hover, so the target is always clear.
+
+## Smart select
+
+Smart select finds the part of the page that belongs together:
+
+| You point at | It takes |
+|---|---|
+| A paragraph | The paragraph |
+| A list item | The whole list, with the sentence that leads into it when that sentence ends with a colon |
+| A picture | The figure with its caption |
+| A table cell | The whole table with its caption |
+| A code block | The code, with the sentence that leads into it |
+| A term or a definition | The term with its definitions |
+| A card or a note box | The whole box |
+| A heading | Its section: the heading and everything under it, up to the next heading of the same level |
+
+Click inside the selection to take the section around it, under its title.
+Each further click takes the section around that one.
+"Takes: Section" in the tool bar takes the section on the first click.
+A heading inside a card or a note heads only that box, and boxes that float over the page, such as cookie banners, stay out.
 
 ## Try it
 
@@ -57,7 +79,7 @@ The keys work while the tools are on.
 
 | Key | Action |
 |---|---|
-| W, M, L, B, T | Magic wand, marquee, lasso, brush, text |
+| S, W, M, L, B, T | Smart select, magic wand, marquee, lasso, brush, text |
 | Shift, Alt, Shift+Alt | Add, subtract or intersect for the next click or drag |
 | [ and ] | Tolerance down and up, or brush size with the brush |
 | Q | Switch between ants and mask view |
@@ -96,6 +118,8 @@ ws.select(document.querySelector("article")!);
 `selection.parts` gives each touched block with its element, its kind (heading, paragraph, list item, code, quote, cell, caption, term, media or text), whether all of it is selected, its text, and a DOM range.
 `selection.ranges()` gives live DOM ranges, one for each run.
 `selection.media` gives the selected pictures and videos.
+`selection.context()` gives the titles above the selection, outermost first, and the running text just before and after it in the same section.
+A tool that explains the selection can send this along, so the answer knows the topic without the whole page.
 
 Options:
 
@@ -106,7 +130,7 @@ Options:
 | `palette` | Show the built-in tool bar. The default is true. |
 | `exitOnEscape` | Escape puts the tools away. The default is true. |
 | `shadowRoot` | How to reach shadow roots. An extension can pass `chrome.dom.openOrClosedShadowRoot` to reach closed ones. |
-| `tool`, `mode`, `tolerance`, `contiguous`, `wholeBlocks`, `brushSize`, `brushBlocks`, `view` | Starting settings. |
+| `tool`, `mode`, `reach`, `tolerance`, `contiguous`, `wholeBlocks`, `brushSize`, `brushBlocks`, `view` | Starting settings. The tool bar starts with smart select. |
 
 ## How it works
 
@@ -122,6 +146,7 @@ As a guide, a tolerance of about 20 keeps to one kind of block, and about 40 tak
 The overlay is one element at the page's origin with a shadow root.
 It draws in page coordinates, so the outline scrolls with the page without being redrawn.
 Whole blocks are drawn as their boxes and partial text as solid line bands.
+A card, note, table, list or figure that is all selected is drawn as its own box.
 Blocks that follow each other are joined into one area with one outline.
 While the tools are on, a clear layer takes the pointer, so clicks select instead of opening links.
 
@@ -144,6 +169,7 @@ The selection is kept as live DOM ranges, so it follows the page when the page c
 | `npm test` | Unit tests (Vitest) |
 | `npm run e2e` | End-to-end tests in Chrome and Edge (Playwright) |
 | `npm run shots` | Screenshots of each tool on the playground |
+| `npm run shots:smart` | Screenshots of smart select on the playground |
 | `npm run real` | Screenshots and timings on real sites |
 
 ## License

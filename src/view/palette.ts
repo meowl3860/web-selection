@@ -9,6 +9,7 @@ import type { Tool } from "./cursors.js";
 interface Settings {
   tool: Tool;
   mode: Mode;
+  reach: "part" | "section";
   tolerance: number;
   contiguous: boolean;
   wholeBlocks: boolean;
@@ -28,6 +29,7 @@ export interface PaletteHost {
 }
 
 const ICONS: Record<string, string> = {
+  smart: '<path d="M3.5 3.5h3M9 3.5h2.5M14 3.5h2.5v2.5M16.5 8.5V11M3.5 6v2.5M3.5 11v2.5h2.5" stroke-width="1.4"/><path d="M8.5 8.5v8.6l2.3-2.2 1.6 3.4 1.5-.7-1.6-3.3 3.2-.2z" fill="currentColor" stroke-width="1.1"/>',
   wand: '<path d="M3.5 16.5l9.2-9.2" /><path d="M11.4 6.2l2.4 2.4" /><path d="M15.2 1.9l.75 1.65 1.65.75-1.65.75-.75 1.65-.75-1.65-1.65-.75 1.65-.75z" fill="currentColor" stroke-width="1"/><path d="M17.6 9.3v2M16.6 10.3h2M8.6 2.4v1.6M7.8 3.2h1.6" stroke-width="1.2"/>',
   marquee: '<rect x="3.25" y="4.25" width="13.5" height="11.5" rx="1" stroke-dasharray="2.4 2.1" />',
   lasso: '<path d="M7.2 13.4C4.4 12.8 2.8 11.3 2.8 9.3c0-2.8 3.3-4.9 7.4-4.9s7.4 2.1 7.4 4.9-3.3 4.3-7.4 4.3c-1.1 0-2.1-.1-3-.2z" /><path d="M7.2 13.4c-.3 1.5-1.1 2.9-2.6 4.1" /><circle cx="7.3" cy="13.4" r="1.1" fill="currentColor" stroke="none"/>',
@@ -47,6 +49,7 @@ function svg(name: string): string {
 }
 
 const TOOL_INFO: Record<Tool, { label: string; key: string; help: string }> = {
+  smart: { label: "Smart select", key: "S", help: "Point at any part to see what belongs with it, then click. Click inside the selection to take its whole section." },
   wand: { label: "Magic wand", key: "W", help: "Click a block to select the blocks that look like it." },
   marquee: { label: "Marquee", key: "M", help: "Drag a box to select the text inside it." },
   lasso: { label: "Lasso", key: "L", help: "Draw around the text you want." },
@@ -75,7 +78,7 @@ export class Palette {
   private readonly toolButtons = new Map<Tool, HTMLButtonElement>();
   private readonly modeButtons = new Map<Mode, HTMLButtonElement>();
   private readonly viewButtons = new Map<string, HTMLButtonElement>();
-  private readonly opts: Record<"wand" | "shape" | "brush" | "text", HTMLDivElement>;
+  private readonly opts: Record<"smart" | "wand" | "shape" | "brush" | "text", HTMLDivElement>;
   private readonly tolerance: HTMLInputElement;
   private readonly toleranceNum: HTMLSpanElement;
   private readonly contiguous: HTMLInputElement;
@@ -84,6 +87,7 @@ export class Palette {
   private readonly brushWhole: HTMLInputElement;
   private readonly sizeNum: HTMLSpanElement;
   private readonly status: HTMLSpanElement;
+  private readonly reachButtons = new Map<string, HTMLButtonElement>();
   private readonly deselect: HTMLButtonElement;
   private tipTimer = 0;
 
@@ -133,6 +137,18 @@ export class Palette {
     }
 
     // Options for the current tool, as in Photoshop's options bar.
+    const smartOpts = el("div", "opts");
+    const reach = el("div", "seg");
+    for (const [v, label, help] of [
+      ["part", "Part", "The part under the pointer with what belongs to it: a list with its lead-in, a picture with its caption, a card."],
+      ["section", "Section", "The whole section under the nearest title."],
+    ] as const) {
+      const b = button("", label, `Takes ${label.toLowerCase()}`, () => host.set({ reach: v }), { label, help });
+      this.reachButtons.set(v, b);
+      reach.append(b);
+    }
+    smartOpts.append(el("span", "opt-label", "Takes"), reach);
+
     const wandOpts = el("div", "opts");
     const tolLabel = el("span", "opt-label", "Tolerance");
     this.tolerance = el("input");
@@ -180,9 +196,9 @@ export class Palette {
     brushOpts.append(el("span", "opt-label", "Size"), this.size, this.sizeNum, brushWhole);
 
     const textOpts = el("div", "opts", '<span class="hint">Drag across text. Double-click a word, triple-click a block.</span>');
-    this.opts = { wand: wandOpts, shape: shapeOpts, brush: brushOpts, text: textOpts };
+    this.opts = { smart: smartOpts, wand: wandOpts, shape: shapeOpts, brush: brushOpts, text: textOpts };
 
-    top.append(grip, tools, el("div", "sep"), modes, el("div", "sep"), wandOpts, shapeOpts, brushOpts, textOpts);
+    top.append(grip, tools, el("div", "sep"), modes, el("div", "sep"), smartOpts, wandOpts, shapeOpts, brushOpts, textOpts);
 
     const cmds = el("div", "group cmds");
     const commandButtons = COMMANDS.map((c) => {
@@ -225,6 +241,8 @@ export class Palette {
     for (const [t, b] of this.toolButtons) b.setAttribute("aria-pressed", String(t === s.tool));
     for (const [m, b] of this.modeButtons) b.setAttribute("aria-pressed", String(m === s.mode));
     for (const [v, b] of this.viewButtons) b.setAttribute("aria-pressed", String(v === s.view));
+    for (const [v, b] of this.reachButtons) b.setAttribute("aria-pressed", String(v === s.reach));
+    this.opts.smart.hidden = s.tool !== "smart";
     this.opts.wand.hidden = s.tool !== "wand";
     this.opts.shape.hidden = s.tool !== "marquee" && s.tool !== "lasso";
     this.opts.brush.hidden = s.tool !== "brush";

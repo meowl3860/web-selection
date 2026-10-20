@@ -35,3 +35,38 @@ export function deepElementAt(doc: Document, x: number, y: number, ignore: (el: 
   }
   return el;
 }
+
+/**
+ * Page furniture: menus, side bars, the page header and footer, inside `within` if given.
+ * An <aside> inside an article is a callout that belongs to the text, so it does not count.
+ */
+export function inChrome(el: Element, within?: Element): boolean {
+  let aside = false;
+  let e: Element | null = el;
+  for (; e && e !== within; e = flatParent(e)) {
+    const t = e.localName;
+    const role = e.getAttribute("role");
+    if (t === "nav" || t === "footer" || role === "navigation" || role === "contentinfo" || role === "banner") return true;
+    if (t === "header" && flatParent(e)?.localName === "body") return true;
+    if (t === "aside" || role === "complementary") aside = true;
+    if (t === "article" && aside) return false;
+  }
+  // The walk can stop at `within`; an article around that still makes the aside a callout.
+  if (aside) for (let a: Element | null = e; a; a = flatParent(a)) if (a.localName === "article") return false;
+  return aside;
+}
+
+const floating = new WeakMap<Element, boolean>();
+
+/**
+ * True for content in a fixed box that floats over the page: cookie banners, chat buttons,
+ * pop-ups. It is not part of the text around it.
+ */
+export function isFloating(el: Element): boolean {
+  let v = floating.get(el);
+  if (v !== undefined) return v;
+  const up = flatParent(el);
+  v = getComputedStyle(el).position === "fixed" || (up ? isFloating(up) : false);
+  floating.set(el, v);
+  return v;
+}

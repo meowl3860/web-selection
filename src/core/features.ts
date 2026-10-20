@@ -195,6 +195,27 @@ export function parseColor(s: string): RGBA {
   return [Math.round(+m[1]!), Math.round(+m[2]!), Math.round(+m[3]!), a];
 }
 
+/**
+ * True when an element draws a box of its own: a border on three or four sides, a left rule,
+ * a background that differs from what is behind it, a shadow or a background picture. Cards,
+ * notes and call-outs look like this.
+ */
+export function hasOwnBox(el: Element): boolean {
+  const cs = getComputedStyle(el);
+  let sides = 0;
+  for (const s of ["top", "right", "bottom", "left"]) {
+    const w = parseFloat(cs.getPropertyValue(`border-${s}-width`));
+    const style = cs.getPropertyValue(`border-${s}-style`);
+    if (w > 0 && style !== "none" && style !== "hidden") sides++;
+  }
+  const rule = parseFloat(cs.borderLeftWidth) >= 3 && cs.borderLeftStyle !== "none" && cs.borderLeftStyle !== "hidden";
+  const bg = parseColor(cs.backgroundColor);
+  const parent = flatParent(el);
+  const behind = parent ? backgroundOf(parent) : ([255, 255, 255, 1] as const);
+  const tinted = bg[3] > 0.05 && colorDistance([bg[0], bg[1], bg[2], 1], behind) > 0.01;
+  return sides >= 3 || rule || tinted || cs.boxShadow !== "none" || cs.backgroundImage !== "none";
+}
+
 function backgroundOf(el: Element): RGBA {
   const view = el.ownerDocument.defaultView!;
   for (let e: Element | null = el; e; e = flatParent(e)) {

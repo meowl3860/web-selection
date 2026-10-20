@@ -6,7 +6,7 @@
 
 import { flatContains, flatParent, openShadow, type ShadowOf } from "./dom.js";
 import { readFeatures, signature, type Features } from "./features.js";
-import { normalize, type Interval, type IntervalSet } from "./intervals.js";
+import { normalize, subtract, type Interval, type IntervalSet } from "./intervals.js";
 
 export type BlockKind =
   | "heading"
@@ -56,6 +56,8 @@ export interface Block {
   span: IntervalSet;
   /** False when other blocks sit inside this one. */
   leaf: boolean;
+  /** The blocks directly inside this one. */
+  children: Block[];
   textLength: number;
   features: Features;
   /** Blocks with the same look share a group, so the wand compares groups, not blocks. */
@@ -207,6 +209,20 @@ export class PageIndex {
     return normalize(list);
   }
 
+  /** The positions from the first atom inside an element to the last one, as one run. */
+  spanOfBox(el: Element): Interval | null {
+    // A shadow host shows its shadow tree, not its children, so walk the atoms instead.
+    if (el.shadowRoot || el.localName === "slot") {
+      const set = this.setOfElement(el);
+      return set.length ? [set[0]![0], set[set.length - 1]![1]] : null;
+    }
+    const parent = el.parentNode;
+    if (!parent) return null;
+    const start = this.position(el, 0);
+    const end = this.position(parent, Array.prototype.indexOf.call(parent.childNodes, el) + 1);
+    return end > start ? [start, end] : null;
+  }
+
   /** The pieces of each atom that a set covers, in reading order. */
   pieces(set: IntervalSet): Piece[] {
     const out: Piece[] = [];
@@ -227,6 +243,12 @@ export class PageIndex {
     const seen = new Set<Block>();
     for (const p of this.pieces(set)) seen.add(p.atom.block);
     return [...seen].sort((a, b) => a.order - b.order);
+  }
+
+  /** True when `set` holds every visible character of `run`; spaces it leaves out do not count. */
+  covers(set: IntervalSet, run: IntervalSet): boolean {
+    for (const [s, e] of subtract(run, set)) for (let p = s; p < e; p++) if (!this.isBlank(p)) return false;
+    return true;
   }
 
   /** Drops runs that hold only spaces or nothing visible, and trims spaces off both ends. */
@@ -385,6 +407,7 @@ class Builder {
       atoms: [],
       span: [],
       leaf: true,
+      children: [],
       textLength: 0,
       features: undefined as unknown as Features,
       group: 0,
@@ -448,6 +471,7 @@ class Builder {
         const up = this.blockOf.get(e);
         if (up) {
           up.leaf = false;
+          up.children.push(b);
           break;
         }
       }

@@ -1,7 +1,7 @@
 // The magic wand and the Select menu: Grow, Similar, Expand, Contract and Main text.
 // All of them work on whole blocks in reading order, the way Photoshop's work on pixels.
 
-import { flatContains, flatParent } from "./dom.js";
+import { flatContains, flatParent, inChrome, isFloating } from "./dom.js";
 import { distance } from "./features.js";
 import { normalize, type Interval, type IntervalSet } from "./intervals.js";
 import type { Block, PageIndex } from "./page.js";
@@ -95,7 +95,7 @@ export class Wand {
     const depth = new Map<Element, number>();
     let total = 0;
     for (const b of blocks) {
-      if (!prose(b) || inChrome(b.el)) continue;
+      if (!prose(b) || inChrome(b.el) || isFloating(b.el)) continue;
       const s = 1 + Math.min(3, b.textLength / 100);
       total += s;
       for (let e = flatParent(b.el); e; e = flatParent(e)) score.set(e, (score.get(e) ?? 0) + s);
@@ -118,7 +118,7 @@ export class Wand {
     }
     if (!best) return [];
     const container = best;
-    return blocks.filter((b) => flatContains(container, b.el) && !inChrome(b.el, container));
+    return blocks.filter((b) => flatContains(container, b.el) && !inChrome(b.el, container) && !isFloating(b.el));
   }
 
   private seedGroups(selected: Block[]): Block[] {
@@ -144,16 +144,4 @@ export function spanOfBlocks(blocks: Iterable<Block>): IntervalSet {
   const list: Interval[] = [];
   for (const b of blocks) list.push(...b.span);
   return normalize(list);
-}
-
-/** Menus, side bars, page headers and footers, inside `within` if given. */
-function inChrome(el: Element, within?: Element): boolean {
-  for (let e: Element | null = el; e && e !== within; e = flatParent(e)) {
-    const t = e.localName;
-    const role = e.getAttribute("role");
-    if (t === "nav" || t === "aside" || t === "footer" || role === "navigation" || role === "complementary" || role === "contentinfo") return true;
-    if (t === "header" && flatParent(e)?.localName === "body") return true;
-    if (role === "banner") return true;
-  }
-  return false;
 }

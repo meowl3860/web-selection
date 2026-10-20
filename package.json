@@ -41,7 +41,8 @@
     "check": "npm run typecheck && npm run test && npm run build && npm run e2e",
     "shots": "node scripts/shoot.mjs shots",
     "real": "node scripts/real.mjs real-shots",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "shots:smart": "node scripts/shoot-smart.mjs shots"
   },
   "engines": {
     "node": ">=22"
