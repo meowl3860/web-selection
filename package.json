@@ -1,7 +1,7 @@
 {
   "name": "web-selection",
-  "version": "0.1.0",
-  "description": "Photoshop-style selection on any web page: magic wand, marquee, lasso, brush and text, with add, subtract and intersect.",
+  "version": "0.3.0",
+  "description": "Paint to select: a zero-dependency brush that picks parts of any web page, and turns them into context an AI model can read.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,36 +13,44 @@
   },
   "keywords": [
     "selection",
-    "magic-wand",
-    "lasso",
-    "marquee",
+    "brush",
     "dom",
-    "annotation",
-    "shadow-dom"
+    "shadow-dom",
+    "ai",
+    "llm",
+    "context",
+    "multimodal",
+    "browser-extension"
   ],
   "type": "module",
-  "private": true,
   "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/web-selection.js"
+      "import": "./dist/index.js"
+    },
+    "./context": {
+      "types": "./dist/types/context/index.d.ts",
+      "import": "./dist/context.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build --mode lib && vite build --mode iife && tsc -p tsconfig.build.json",
+    "dev": "node scripts/build.mjs --watch",
+    "build": "node scripts/build.mjs",
+    "fixtures": "vite",
+    "example": "vite --open /examples/",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "e2e": "playwright test",
-    "check": "npm run typecheck && npm run test && npm run build && npm run e2e",
+    "e2e": "node scripts/build.mjs && playwright test",
+    "check": "npm run typecheck && npm test && npm run e2e",
     "shots": "node scripts/shoot.mjs shots",
     "real": "node scripts/real.mjs real-shots",
-    "icons": "node scripts/icons.mjs",
-    "shots:smart": "node scripts/shoot-smart.mjs shots"
+    "eval": "node tests/eval/run.mjs",
+    "bench": "node scripts/build.mjs && node tests/bench/run.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "engines": {
     "node": ">=22"

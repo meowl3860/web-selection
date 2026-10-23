@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frame time, not frame rate · Render Notes</title>
+<link rel="stylesheet" href="./site.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="#">Render Notes</a>
+  <nav class="top-nav" aria-label="Sections">
+    <a href="#">Basics</a>
+    <a href="#" aria-current="page">Profiling</a>
+    <a href="#">Lighting</a>
+    <a href="#">Effects</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="On this page">
+    <p class="toc-title">On this page</p>
+    <ul>
+      <li><a href="#why">Why milliseconds</a></li>
+      <li><a href="#budget">The frame budget</a></li>
+      <li><a href="#where">Where the time goes</a></li>
+      <li><a href="#measure">How to measure</a></li>
+      <li><a href="#words">Words to know</a></li>
+    </ul>
+  </nav>
+
+  <main class="article">
+    <article>
+      <p class="kicker">Profiling · 8 min read</p>
+      <h1>Frame time, not frame rate</h1>
+      <p class="lede">Frames per second is the number players see. Milliseconds per frame is the number you can fix. This page shows why, and how to read both in Unreal Engine.</p>
+
+      <h2 id="why">Why milliseconds</h2>
+      <p>Frame rate is the number of frames the game shows in one second. Frame time is how long one frame takes to make. They carry the same fact, but only frame time adds up: if the shadows take 2 ms and the post effects take 3 ms, together they take 5 ms.</p>
+      <p>Frame rate does not add up like that. A drop from 60 to 50 frames per second costs 3.3 ms of work per frame. A drop from 30 to 25 frames per second is also five frames, but it costs 6.7 ms. The same "five frames" can mean twice the work.</p>
+      <p>So when you compare two scenes, two settings or two shaders, compare their cost in milliseconds. Use frame rate only to tell people how the game feels.</p>
+
+      <table>
+        <caption>Common frame rates and the time each frame gets</caption>
+        <thead>
+          <tr><th>Target</th><th>Frame rate</th><th>Frame time</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Console, cinematic</td><td>30 fps</td><td>33.3 ms</td></tr>
+          <tr><td>Console, performance</td><td>60 fps</td><td>16.7 ms</td></tr>
+          <tr><td>High refresh monitor</td><td>120 fps</td><td>8.3 ms</td></tr>
+          <tr><td>Esports monitor</td><td>240 fps</td><td>4.2 ms</td></tr>
+        </tbody>
+      </table>
+
+      <figure>
+        <svg class="chart" viewBox="0 0 580 230" role="img" aria-label="Frame time falls fast at low frame rates and slowly at high ones">
+          <title>Frame time against frame rate</title>
+          <g class="grid">
+            <line x1="40" y1="20" x2="40" y2="200"/><line x1="40" y1="200" x2="560" y2="200"/>
+            <line x1="40" y1="140" x2="560" y2="140"/><line x1="40" y1="80" x2="560" y2="80"/>
+          </g>
+          <polyline class="curve" points="40,20 62.7,80 85.5,110 108.2,128 130.9,140 165,152 199.1,160 267.3,170 321.8,175 369.5,178.2 449.1,182 540,185"/>
+          <g class="labels">
+            <text x="34" y="24" text-anchor="end">50 ms</text>
+            <text x="34" y="84" text-anchor="end">33 ms</text>
+            <text x="34" y="144" text-anchor="end">17 ms</text>
+            <text x="40" y="218">20 fps</text>
+            <text x="130.9" y="218" text-anchor="middle">60</text>
+            <text x="267.3" y="218" text-anchor="middle">120</text>
+            <text x="540" y="218" text-anchor="end">240 fps</text>
+          </g>
+        </svg>
+        <figcaption>Each extra frame per second buys less time as the frame rate rises.</figcaption>
+      </figure>
+
+      <h2 id="budget">The frame budget</h2>
+      <p>At 60 frames per second, every frame has 16.7 ms. That is the budget. Everything the game does for one frame must fit inside it: game logic, animation, physics, building the draw calls, and the work on the GPU.</p>
+      <p>The CPU and the GPU work at the same time, on different frames. While the GPU draws frame 10, the CPU already prepares frame 11. So the frame takes as long as the slowest of them, not the sum.</p>
+      <aside class="note">
+        <p class="note-title">Note</p>
+        <p>A game that is "GPU bound" gets no faster when you make the CPU work cheaper. First find out which side is slow, then work on that side.</p>
+      </aside>
+      <p>Keep some time in reserve. A scene that uses all 16.7 ms on a quiet moment will miss the budget when an explosion fills the screen.</p>
+
+      <h2 id="where">Where the time goes</h2>
+      <p>A deferred renderer such as Unreal's spends a frame's GPU time in passes. The big ones, in the order they run:</p>
+      <ol>
+        <li>The depth prepass, which finds the nearest surface at each pixel.</li>
+        <li>The base pass, which writes the material data of each pixel to the G-buffer.</li>
+        <li>Shadow depths, which draw the scene again from each shadow-casting light.</li>
+        <li>Lighting, which reads the G-buffer and adds each light's share.</li>
+        <li>Translucency and effects, which draw see-through surfaces such as smoke and glass.</li>
+        <li>Post processing, which adds bloom, motion blur, tone mapping and upscaling.</li>
+      </ol>
+      <p>Two kinds of cost show up again and again:</p>
+      <ul>
+        <li>Overdraw: the same pixel drawn many times, as with layers of smoke.
+          <ul>
+            <li>Shows in the translucency pass.</li>
+            <li>Grows with how much of the screen the effect covers.</li>
+          </ul>
+        </li>
+        <li>Shader cost: too much math for each pixel, as with a heavy material on a large surface.</li>
+      </ul>
+
+      <h3>A smoke example</h3>
+      <p>A fire with 40 large smoke sprites can cost more than the whole lit scene behind it. Each sprite covers much of the screen, and each pixel under it runs the smoke material once per sprite. Fewer, smaller sprites, or a cheaper material, fix it.</p>
+
+      <h2 id="measure">How to measure</h2>
+      <p>In Unreal Engine, open the console with the <code>`</code> key and type one of these commands while the game runs:</p>
+      <pre><code>stat unit      // Frame, Game, Draw and GPU time
+stat gpu       // GPU time of each pass
+profilegpu     // one frame in the GPU Visualizer</code></pre>
+      <p><code>stat unit</code> tells you which side is slow. If GPU is the largest number, the GPU is the limit. If Game is the largest, the game thread is.</p>
+      <p>To measure in code, time the work on both sides of it:</p>
+      <pre><code class="language-cpp">const double Start = FPlatformTime::Seconds();
+RunTheWork();
+const double Ms = (FPlatformTime::Seconds() - Start) * 1000.0;
+UE_LOG(LogTemp, Log, TEXT("Work took %.2f ms"), Ms);</code></pre>
+      <blockquote>
+        <p>Measure first. Most guesses about what is slow are wrong.</p>
+      </blockquote>
+      <p>Measure the same view each time, with the same settings and the editor closed. Small changes in the camera can move the cost a lot.</p>
+
+      <h2 id="words">Words to know</h2>
+      <dl>
+        <dt>Frame time</dt>
+        <dd>How long one frame takes to make, in milliseconds.</dd>
+        <dt>Budget</dt>
+        <dd>The frame time you aim for, such as 16.7 ms for 60 frames per second.</dd>
+        <dt>Overdraw</dt>
+        <dd>Drawing the same pixel more than once in one frame.</dd>
+      </dl>
+
+      <h3>日本語のメモ</h3>
+      <p>フレームレートではなく、フレームタイムで考えましょう。60fpsでは1フレームに使える時間は16.7ミリ秒です。どの処理に何ミリ秒かかっているかを測ってから、最適化を始めます。</p>
+      <p id="arabic" lang="ar" dir="rtl">قِس زمن الإطار بالمللي ثانية، لا بعدد الإطارات في الثانية.</p>
+
+      <section class="related" aria-label="Read next">
+        <h2>Read next</h2>
+        <div class="cards">
+          <a class="card" href="#"><span class="card-tag">Lighting</span><span class="card-title">Shadow maps and their cost</span><span class="card-text">Why each shadow-casting light draws the scene again.</span></a>
+          <a class="card" href="#"><span class="card-tag">Effects</span><span class="card-title">Cheap smoke that still looks thick</span><span class="card-text">Fewer sprites, soft edges and depth fade.</span></a>
+          <a class="card" href="#"><span class="card-tag">Basics</span><span class="card-title">What a G-buffer holds</span><span class="card-text">The material data a deferred renderer keeps for each pixel.</span></a>
+        </div>
+      </section>
+    </article>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>Render Notes · written for learners of real-time rendering.</p>
+</footer>
+
+
+</body>
+</html>

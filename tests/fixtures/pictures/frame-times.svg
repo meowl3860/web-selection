@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="640" height="360" fill="#ffffff"/>
+  <text x="320" y="32" text-anchor="middle" font-size="17" font-weight="600" fill="#1d2233">Average frame time per day (ms)</text>
+  <g stroke="#e3e6ef" stroke-width="1">
+    <line x1="60" y1="300" x2="610" y2="300"/>
+    <line x1="60" y1="240" x2="610" y2="240"/>
+    <line x1="60" y1="180" x2="610" y2="180"/>
+    <line x1="60" y1="120" x2="610" y2="120"/>
+    <line x1="60" y1="60" x2="610" y2="60"/>
+  </g>
+  <g font-size="12" fill="#6b7186" text-anchor="end">
+    <text x="52" y="304">0</text><text x="52" y="244">8</text><text x="52" y="184">16</text><text x="52" y="124">24</text><text x="52" y="64">32</text>
+  </g>
+  <!-- 1 ms = 7.5 px; bars are 50 px wide, 78.5 px apart -->
+  <g fill="#4f7cf0">
+    <rect x="75" y="193.5" width="50" height="106.5"/>
+    <rect x="153.5" y="181.5" width="50" height="118.5"/>
+    <rect x="232" y="186.75" width="50" height="113.25"/>
+    <rect x="310.5" y="90.75" width="50" height="209.25" fill="#e5533d"/>
+    <rect x="389" y="177" width="50" height="123"/>
+    <rect x="467.5" y="183.75" width="50" height="116.25"/>
+    <rect x="546" y="189" width="50" height="111"/>
+  </g>
+  <g font-size="13" font-weight="600" fill="#1d2233" text-anchor="middle">
+    <text x="100" y="187">14.2</text><text x="178.5" y="175">15.8</text><text x="257" y="180">15.1</text>
+    <text x="335.5" y="84">27.9</text><text x="414" y="171">16.4</text><text x="492.5" y="177">15.5</text><text x="571" y="183">14.8</text>
+  </g>
+  <g font-size="13" fill="#4a5068" text-anchor="middle">
+    <text x="100" y="322">Mon</text><text x="178.5" y="322">Tue</text><text x="257" y="322">Wed</text><text x="335.5" y="322">Thu</text>
+    <text x="414" y="322">Fri</text><text x="492.5" y="322">Sat</text><text x="571" y="322">Sun</text>
+  </g>
+</svg>

@@ -7,6 +7,5 @@
     "outDir": "dist/types",
     "rootDir": "src"
   },
-  "include": ["src"],
-  "exclude": ["src/global.ts"]
+  "include": ["src"]
 }

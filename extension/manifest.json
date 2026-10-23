@@ -1,19 +1,36 @@
 {
   "manifest_version": 3,
-  "name": "Web Selection (try it)",
-  "version": "0.1.0",
-  "description": "Photoshop-style selection on any page. Click the button or press Alt+Shift+S.",
+  "name": "Web Selection",
+  "version": "0.3.0",
+  "description": "Paint over any web page with a brush to select its elements.",
   "action": {
-    "default_title": "Select on this page (Alt+Shift+S)",
-    "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png" }
+    "default_title": "Web Selection",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png"
+    }
   },
-  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["activeTab", "scripting"],
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
   "commands": {
-    "_execute_action": {
-      "suggested_key": { "default": "Alt+Shift+S" },
-      "description": "Turn the selection tools on or off"
+    "toggle-brush": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Turn the brush on or off"
     }
   }
 }

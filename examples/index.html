@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Selection example</title>
+<link rel="stylesheet" href="./example.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><span class="logo" aria-hidden="true"></span>Web Selection</div>
+  <p class="tagline">Paint to select. See what a model gets.</p>
+  <button id="toggle" class="primary" type="button">Start painting <kbd>B</kbd></button>
+</header>
+
+<div class="layout">
+  <main class="article" id="article">
+    <article>
+      <p class="kicker">Profiling · 4 min read</p>
+      <h1>The frame budget</h1>
+      <p class="lede">At 60 frames per second, every frame has 16.7 ms. Everything the game does for one frame must fit inside that time.</p>
+
+      <h2>Where the time goes</h2>
+      <p>The CPU and the GPU work at the same time, on different frames. While the GPU draws frame 10, the CPU already prepares frame 11. So the frame takes as long as the slowest of them, not the sum.</p>
+      <table>
+        <caption>Common frame rates and the time each frame gets</caption>
+        <thead><tr><th>Target</th><th>Frame rate</th><th>Frame time</th></tr></thead>
+        <tbody>
+          <tr><td>Console, cinematic</td><td>30 fps</td><td>33.3 ms</td></tr>
+          <tr><td>Console, performance</td><td>60 fps</td><td>16.7 ms</td></tr>
+          <tr><td>High refresh monitor</td><td>120 fps</td><td>8.3 ms</td></tr>
+        </tbody>
+      </table>
+
+      <h2>A week of numbers</h2>
+      <p>We measured the test level every day with the same camera path. One day stands out.</p>
+      <figure>
+        <img src="../tests/fixtures/pictures/frame-times.svg" width="640" height="360" alt="Bar chart of the average frame time per day">
+        <figcaption>Average frame time per day, in milliseconds.</figcaption>
+      </figure>
+
+      <h2>How to measure</h2>
+      <p>To measure in code, time the work on both sides of it:</p>
+      <pre><code class="language-cpp">const double Start = FPlatformTime::Seconds();
+RunTheWork();
+const double Ms = (FPlatformTime::Seconds() - Start) * 1000.0;
+UE_LOG(LogTemp, Log, TEXT("Work took %.2f ms"), Ms);</code></pre>
+
+      <h2>The team</h2>
+      <p>The people who made the numbers, at the park on Saturday.</p>
+      <figure>
+        <img src="../tests/fixtures/pictures/people.jpg" width="800" height="450" alt="The team at the park">
+        <figcaption>From left to right.</figcaption>
+      </figure>
+    </article>
+  </main>
+
+  <aside class="panel" aria-label="What a model gets">
+    <div class="panel-head">
+      <h2>What a model gets</h2>
+      <p class="tokens" id="tokens">Nothing selected</p>
+    </div>
+    <p class="hint" id="hint">Start painting, then paint over anything on the page: words, a table cell, a line of code, a person in the picture.</p>
+    <form class="controls" id="controls">
+      <fieldset>
+        <legend>Text</legend>
+        <label><input type="radio" name="text" value="marked" checked><span>Marked</span></label>
+        <label><input type="radio" name="text" value="whole"><span>Whole</span></label>
+        <label><input type="radio" name="text" value="painted"><span>Painted only</span></label>
+      </fieldset>
+      <fieldset>
+        <legend>Pictures</legend>
+        <label><input type="radio" name="images" value="full" checked><span>Full</span></label>
+        <label><input type="radio" name="images" value="balanced"><span>Balanced</span></label>
+        <label><input type="radio" name="images" value="budget"><span>Budget</span></label>
+        <label><input type="radio" name="images" value="none"><span>None</span></label>
+      </fieldset>
+      <fieldset>
+        <legend>Format</legend>
+        <label><input type="radio" name="format" value="markdown" checked><span>Markdown</span></label>
+        <label><input type="radio" name="format" value="json"><span>JSON</span></label>
+      </fieldset>
+      <div class="numbers">
+        <label>Text around <input type="number" name="around" value="300" min="0" step="50"> characters</label>
+        <label>Budget <input type="number" name="budget" placeholder="none" min="50" step="50"> tokens</label>
+      </div>
+    </form>
+    <div class="output" id="output"></div>
+  </aside>
+</div>
+
+<script type="module" src="./main.ts"></script>
+</body>
+</html>

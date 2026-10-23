@@ -1,8 +1,10 @@
 node_modules/
-dist/
-dist-playground/
 test-results/
 playwright-report/
 shots/
 real-shots/
-extension/web-selection.js
+extension/content.js
+extension/popup.js
+dist/
+tests/eval/results/
+tests/bench/results/

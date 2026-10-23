@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a9d8ff"/>
+      <stop offset="1" stop-color="#e6f4ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky)"/>
+  <circle cx="690" cy="70" r="34" fill="#ffe27a"/>
+  <g fill="#ffffff" opacity="0.9">
+    <ellipse cx="150" cy="70" rx="56" ry="18"/><ellipse cx="190" cy="58" rx="38" ry="20"/>
+    <ellipse cx="470" cy="50" rx="48" ry="15"/><ellipse cx="500" cy="42" rx="30" ry="16"/>
+  </g>
+  <g fill="#6fb36f">
+    <circle cx="40" cy="250" r="70"/><circle cx="120" cy="270" r="52"/>
+    <circle cx="770" cy="255" r="64"/><circle cx="700" cy="280" r="44"/>
+  </g>
+  <rect x="34" y="300" width="12" height="40" fill="#8a5a33"/>
+  <rect x="764" y="300" width="12" height="40" fill="#8a5a33"/>
+  <rect y="330" width="800" height="120" fill="#86cc7f"/>
+  <path d="M0 360 Q 400 330 800 362 L 800 450 L 0 450 Z" fill="#79c072"/>
+
+  <!-- 1: yellow shirt, red umbrella -->
+  <g transform="translate(110 0)">
+    <path d="M-62 150 Q 0 82 62 150 Q 41 140 21 150 Q 0 138 -21 150 Q -41 140 -62 150 Z" fill="#e23b3b"/>
+    <line x1="0" y1="112" x2="0" y2="104" stroke="#555" stroke-width="3"/>
+    <line x1="0" y1="150" x2="0" y2="262" stroke="#444" stroke-width="3"/>
+    <path d="M0 262 q 0 9 -8 9" fill="none" stroke="#444" stroke-width="3"/>
+    <rect x="-13" y="330" width="11" height="70" rx="4" fill="#33415c"/><rect x="3" y="330" width="11" height="70" rx="4" fill="#33415c"/>
+    <rect x="-28" y="240" width="56" height="96" rx="14" fill="#f2c230"/>
+    <path d="M24 250 L 8 266" stroke="#f2c230" stroke-width="12" stroke-linecap="round"/>
+    <path d="M-24 250 L -34 320" stroke="#f2c230" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="4" cy="266" r="7" fill="#e8b48f"/><circle cx="-34" cy="324" r="7" fill="#e8b48f"/>
+    <circle cx="0" cy="214" r="24" fill="#e8b48f"/>
+    <path d="M-24 210 Q -22 186 0 186 Q 24 186 24 210 Q 12 198 -24 210 Z" fill="#3b2a1f"/>
+  </g>
+
+  <!-- 2: green shirt, blue balloon -->
+  <g transform="translate(255 0)">
+    <path d="M34 318 C 46 260 70 220 60 160" fill="none" stroke="#666" stroke-width="2"/>
+    <ellipse cx="60" cy="128" rx="28" ry="34" fill="#3a7bd5"/>
+    <path d="M56 162 l 4 -6 l 4 6 z" fill="#3a7bd5"/>
+    <ellipse cx="50" cy="114" rx="7" ry="11" fill="#ffffff" opacity="0.35"/>
+    <rect x="-13" y="330" width="11" height="70" rx="4" fill="#4b3b2f"/><rect x="3" y="330" width="11" height="70" rx="4" fill="#4b3b2f"/>
+    <rect x="-28" y="240" width="56" height="96" rx="14" fill="#3aa657"/>
+    <path d="M24 252 L 34 314" stroke="#3aa657" stroke-width="12" stroke-linecap="round"/>
+    <path d="M-24 252 L -34 320" stroke="#3aa657" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="34" cy="318" r="7" fill="#9c6b4a"/><circle cx="-34" cy="324" r="7" fill="#9c6b4a"/>
+    <circle cx="0" cy="214" r="24" fill="#9c6b4a"/>
+    <path d="M-25 214 Q -26 184 0 184 Q 26 184 25 214 L 20 200 Q 0 192 -20 200 Z" fill="#1d1d1d"/>
+  </g>
+
+  <!-- 3: purple shirt, guitar -->
+  <g transform="translate(400 0)">
+    <rect x="-13" y="330" width="11" height="70" rx="4" fill="#2f2f38"/><rect x="3" y="330" width="11" height="70" rx="4" fill="#2f2f38"/>
+    <rect x="-28" y="240" width="56" height="96" rx="14" fill="#7d4cc2"/>
+    <path d="M-24 252 L -30 300" stroke="#7d4cc2" stroke-width="12" stroke-linecap="round"/>
+    <g transform="rotate(-38 6 300)">
+      <rect x="4" y="214" width="9" height="66" fill="#5a3a1e"/>
+      <rect x="1" y="204" width="15" height="14" rx="2" fill="#3d2814"/>
+      <circle cx="8" cy="290" r="18" fill="#c27a2e"/>
+      <circle cx="8" cy="318" r="24" fill="#c27a2e"/>
+      <circle cx="8" cy="300" r="6" fill="#3d2814"/>
+      <rect x="1" y="322" width="14" height="4" fill="#3d2814"/>
+    </g>
+    <path d="M24 252 L 22 306" stroke="#7d4cc2" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="22" cy="308" r="7" fill="#f1c7a5"/><circle cx="-30" cy="302" r="7" fill="#f1c7a5"/>
+    <circle cx="0" cy="214" r="24" fill="#f1c7a5"/>
+    <path d="M-25 218 Q -30 180 2 184 Q 30 186 25 220 Q 22 196 -2 196 Q -20 198 -25 218 Z" fill="#c9862f"/>
+  </g>
+
+  <!-- 4: orange shirt, open book -->
+  <g transform="translate(545 0)">
+    <rect x="-13" y="330" width="11" height="70" rx="4" fill="#36506b"/><rect x="3" y="330" width="11" height="70" rx="4" fill="#36506b"/>
+    <rect x="-28" y="240" width="56" height="96" rx="14" fill="#f0802a"/>
+    <path d="M-24 252 L -20 286" stroke="#f0802a" stroke-width="12" stroke-linecap="round"/>
+    <path d="M24 252 L 20 286" stroke="#f0802a" stroke-width="12" stroke-linecap="round"/>
+    <path d="M0 296 L -34 286 L -34 258 L 0 268 Z" fill="#1f3c88"/>
+    <path d="M0 296 L 34 286 L 34 258 L 0 268 Z" fill="#1f3c88"/>
+    <path d="M0 292 L -30 283 L -30 261 L 0 270 Z" fill="#fbfbf5"/>
+    <path d="M0 292 L 30 283 L 30 261 L 0 270 Z" fill="#fbfbf5"/>
+    <g stroke="#b9b9b0" stroke-width="1.2">
+      <line x1="-26" y1="267" x2="-5" y2="273"/><line x1="-26" y1="273" x2="-5" y2="279"/>
+      <line x1="5" y1="273" x2="26" y2="267"/><line x1="5" y1="279" x2="26" y2="273"/>
+    </g>
+    <circle cx="-20" cy="290" r="7" fill="#e3a982"/><circle cx="20" cy="290" r="7" fill="#e3a982"/>
+    <circle cx="0" cy="214" r="24" fill="#e3a982"/>
+    <path d="M-24 212 Q -24 186 0 188 Q 26 188 24 214 Q 30 240 22 252 Q 20 222 14 200 Q 0 196 -14 200 Q -20 222 -22 252 Q -30 240 -24 212 Z" fill="#7a1f1f"/>
+  </g>
+
+  <!-- 5: teal shirt, dog on a lead -->
+  <g transform="translate(675 0)">
+    <path d="M32 318 Q 52 360 74 362" fill="none" stroke="#c0392b" stroke-width="2.5"/>
+    <g transform="translate(92 372)">
+      <ellipse cx="0" cy="0" rx="26" ry="14" fill="#b07a45"/>
+      <rect x="-20" y="8" width="7" height="20" rx="3" fill="#b07a45"/><rect x="12" y="8" width="7" height="20" rx="3" fill="#b07a45"/>
+      <circle cx="-26" cy="-12" r="12" fill="#b07a45"/>
+      <ellipse cx="-30" cy="-22" rx="5" ry="9" fill="#7a4f28" transform="rotate(-20 -30 -22)"/>
+      <circle cx="-30" cy="-13" r="2" fill="#222"/>
+      <ellipse cx="-37" cy="-8" rx="4" ry="3" fill="#222"/>
+      <path d="M24 -6 Q 36 -20 32 -26" fill="none" stroke="#b07a45" stroke-width="5" stroke-linecap="round"/>
+      <rect x="-22" y="-6" width="8" height="5" fill="#c0392b"/>
+    </g>
+    <rect x="-13" y="330" width="11" height="70" rx="4" fill="#5b4636"/><rect x="3" y="330" width="11" height="70" rx="4" fill="#5b4636"/>
+    <rect x="-28" y="240" width="56" height="96" rx="14" fill="#1f9e9e"/>
+    <path d="M24 252 L 32 314" stroke="#1f9e9e" stroke-width="12" stroke-linecap="round"/>
+    <path d="M-24 252 L -34 320" stroke="#1f9e9e" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="32" cy="318" r="7" fill="#d9a066"/><circle cx="-34" cy="324" r="7" fill="#d9a066"/>
+    <circle cx="0" cy="214" r="24" fill="#d9a066"/>
+    <path d="M-24 206 Q -18 184 2 186 Q 22 186 25 204 L -24 206 Z" fill="#222"/>
+    <rect x="-26" y="200" width="52" height="7" rx="3" fill="#222"/>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team week · Render Notes</title>
+<link rel="stylesheet" href="./site.css">
+<style>
+  figure img { display: block; width: 100%; height: auto; border-radius: 6px; }
+  .toolbar-shot { max-width: 640px; }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="#">Render Notes</a>
+  <nav class="top-nav" aria-label="Sections">
+    <a href="#">Basics</a>
+    <a href="#" aria-current="page">Team</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="On this page">
+    <p class="toc-title">On this page</p>
+    <ul>
+      <li><a href="#park">The park day</a></li>
+      <li><a href="#numbers">The week in numbers</a></li>
+      <li><a href="#mail">The new mail app</a></li>
+    </ul>
+  </nav>
+
+  <main class="article">
+    <article>
+      <p class="kicker">Team · 3 min read</p>
+      <h1>Team week</h1>
+      <p class="lede">A short look back at the week: a day out, the numbers from the build, and a tool we started to use.</p>
+
+      <h2 id="park">The park day</h2>
+      <p>On Saturday the whole team met at the park by the river. Everyone brought one thing from home.</p>
+      <figure>
+        <img id="people" src="./pictures/people.jpg" width="800" height="450" alt="The team at the park">
+        <figcaption>The team at the park, from left to right.</figcaption>
+      </figure>
+
+      <h2 id="numbers">The week in numbers</h2>
+      <p>We measured the average frame time of the test level every day on the same machine, with the same camera path.</p>
+      <figure>
+        <img id="frame-times" src="./pictures/frame-times.svg" width="640" height="360" alt="Bar chart of the average frame time per day">
+        <figcaption>One bar for each day of the week.</figcaption>
+      </figure>
+      <p>Lower is better. A frame budget of 16.7 ms gives 60 frames per second.</p>
+
+      <h2 id="mail">The new mail app</h2>
+      <p>We moved the team to a new mail app. Its toolbar shows icons only, which took some getting used to.</p>
+      <figure class="toolbar-shot">
+        <img id="toolbar" src="./pictures/toolbar.svg" width="640" height="150" alt="Screenshot of the mail app">
+        <figcaption>The toolbar above an open message.</figcaption>
+      </figure>
+    </article>
+  </main>
+</div>
+</body>
+</html>

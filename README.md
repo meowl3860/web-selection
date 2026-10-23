@@ -1,176 +1,205 @@
-# web-selection
+# Web Selection
 
-Photoshop-style selection for any web page.
-Point at a part of the page and smart select takes what belongs with it.
-Or click a paragraph with the magic wand, drag a marquee, draw a lasso, or paint with a brush.
-Shift adds, Alt subtracts, and Shift+Alt intersects, as in Photoshop.
-The result is a clean selection of blocks, text and pictures that other tools can use.
+Paint to select.
+A zero-dependency brush that picks parts of any web page, and turns them into context an AI model can read.
 
-It has no runtime dependencies and never moves or changes the page's own nodes.
+- Turn the brush on, and the page is a canvas.
+  Every element the paint covers is selected: paragraphs, headings, list items, table cells, code, pictures, buttons.
+- It knows exactly what was painted: the words under the paint, and the place on a picture.
+- `toContext()` turns the selection into Markdown or JSON for a model, with the painted words marked, where on the page they are, the text around them, and pictures with the paint drawn on them.
+- A note on a mark says what the user wants there, such as "remove this person": each mark is numbered, and the notes go to the model with their numbers.
+- It works on any existing page, also pages built from web components, with no setup on the page.
 
-## How Photoshop maps to a page
+It is a library first.
+The browser extension in `extension/` is its demo: load it, and paint on any site.
 
-| Photoshop | On a web page |
+## Install
+
+```sh
+npm install web-selection
+```
+
+There are no runtime dependencies.
+
+## Use
+
+```ts
+import { createBrush } from "web-selection";
+import { toContext } from "web-selection/context";
+
+const brush = createBrush();
+brush.enable();
+
+brush.on("end", async () => {
+  const context = await toContext(brush.items());
+  // context.parts: text and pictures in order, for a model's message
+  // context.tokens: about how many input tokens they take
+});
+```
+
+Send the parts to a model.
+For the Anthropic API:
+
+```ts
+const content = context.parts.map((p) =>
+  p.type === "text"
+    ? { type: "text", text: p.text }
+    : { type: "image", source: { type: "base64", media_type: p.mediaType, data: p.data } },
+);
+content.push({ type: "text", text: question });
+```
+
+`npm run example` opens a page that shows what a model gets for what you paint, in each format.
+
+## The brush
+
+`createBrush(options)` returns the brush.
+
+| Option | Default | What it does |
+|---|---|---|
+| `root` | the page body | Where to select |
+| `targets` | found by the brush | A CSS selector, or a test `(el) => boolean`, that names the elements that count; each is then selected as a whole |
+| `exclude` | none | A test for elements to leave out, with everything inside them |
+| `size` | 16 | The brush radius in CSS pixels, from 4 to 60 |
+| `color` | `#4b57f0` | The paint colour |
+| `look` | `"default"` | `"default"` makes the letters of selected text jitter and pins pictures and code like photos; `"none"` leaves the page as it is, so you can show the selection your own way |
+| `hud` | `true` | Shows the status line at the bottom of the screen while the brush is on |
+| `shadowRoot` | open roots only | How to reach shadow roots; an extension can pass `chrome.dom.openOrClosedShadowRoot` |
+| `zIndex` | 2147483646 | The overlay's stacking order |
+
+| Member | What it is |
 |---|---|
-| Pixel | One character of text, or one picture, video or frame |
-| Object Selection, Object Finder | Smart select: point at any part to see what belongs with it, then click (see below) |
-| Magic wand | Click a block to select the blocks that look like it: kind, font, size, weight, colour, background and indent |
-| Tolerance | How alike blocks must look, from 0 (the same look) to 100 (everything) |
-| Contiguous on | Only the run of alike blocks around the click, for example one section's paragraphs |
-| Contiguous off | Every alike block on the page, for example every code block |
-| Marquee, Lasso | Drag a box or draw a shape to select the exact characters inside it |
-| Quick Selection brush | Paint over blocks to select each block you touch |
-| Quick Mask painting | The brush with "Whole blocks" off paints only the characters under it |
-| Shift, Alt, Shift+Alt | Add, subtract, intersect |
-| Grow, Similar, Inverse | Grow, Similar and Invert, on blocks |
-| Expand, Contract | Add or remove one block at each end of each run |
-| Select Subject | Main text: the page's main article, without menus and side bars |
-| Marching ants, Quick Mask | Ants around the selection, or a red tint over everything outside it |
+| `enable()`, `disable()`, `toggle()`, `enabled` | Turns the brush on and off; the paint and the selection stay when it is off |
+| `selected` | The selected elements, in reading order |
+| `items()` | The selected elements, each with what the paint covers: see below |
+| `marks()` | The places the user marked, numbered in the order they were made, each with its note and its box on the screen |
+| `note(mark, text)` | Gives a mark its note; the next stroke then starts a new mark |
+| `unmarked(fn)` | Runs `fn` with the page as it is without the brush, no paint and no look: for taking a screenshot of the tab |
+| `text()` | The text of the selected elements, one per paragraph |
+| `undo()`, `redo()`, `clear()` | The paint's history |
+| `size` | The brush radius |
+| `on(event, fn)` | `change` (the selected elements), `start` and `end` (each stroke; `end` gives its mark, the point where it ended, and whether it was cancelled), `marks` (a mark was added, taken away or given a note), `enabled`; returns a function that stops listening |
+| `destroy()` | Takes the brush and everything it added off the page |
 
-Smart select and the wand show what a click will take while you hover, so the target is always clear.
+Each item from `items()` has:
 
-## Smart select
-
-Smart select finds the part of the page that belongs together:
-
-| You point at | It takes |
+| Field | What it is |
 |---|---|
-| A paragraph | The paragraph |
-| A list item | The whole list, with the sentence that leads into it when that sentence ends with a colon |
-| A picture | The figure with its caption |
-| A table cell | The whole table with its caption |
-| A code block | The code, with the sentence that leads into it |
-| A term or a definition | The term with its definitions |
-| A card or a note box | The whole box |
-| A heading | Its section: the heading and everything under it, up to the next heading of the same level |
+| `element`, `kind` | The element, and whether it is `text`, `media` or a `control` |
+| `textNodes` | The text nodes that belong to it |
+| `ranges` | The painted words, as DOM ranges; a word counts when paint covers enough of the middle of its line |
+| `area` | Where the paint lies on the element: its `box` as shares of the element's width and height, the share it `coverage`s, and the `strokes` in the element's own pixels |
+| `marks` | The marks whose paint lies on the element, each with its own `ranges` and `area`, its number `n` and its `note` |
 
-Click inside the selection to take the section around it, under its title.
-Each further click takes the section around that one.
-"Takes: Section" in the tool bar takes the section on the first click.
-A heading inside a card or a note heads only that box, and boxes that float over the page, such as cookie banners, stay out.
+While the brush is on:
 
-## Try it
+| Action | How |
+|---|---|
+| Paint | Drag |
+| Erase | Hold Alt and drag |
+| Remove a whole stroke | Right-click on it |
+| Cancel the stroke you are painting | Right-click during the drag, or Escape |
+| Brush size | `[` and `]` |
+| Undo, redo | Ctrl+Z, Ctrl+Shift+Z |
+| Clear all paint | Delete |
+| Copy the selected text | Ctrl+C |
+| Put the brush away | Escape |
 
-On the playground page:
+Clicks paint instead of opening links.
+The mouse wheel still scrolls the page, and the scroll box under the pointer.
+
+## Context for a model
+
+`toContext(input, options)` takes the brush's items, plain elements, or DOM ranges such as the page's own text selection, so it works with any way of selecting.
+It returns `{ parts, text, tokens }`.
+
+| Option | Default | What it does |
+|---|---|---|
+| `text` | `"marked"` | `"marked"`: whole elements with the painted words between `<mark>` and `</mark>`; `"whole"`: whole elements; `"painted"`: only the painted words |
+| `images` | `"full"` | `"full"`: the picture, a copy with the paint on it, and the painted box as numbers; `"balanced"`: the copy with the paint, smaller, and the box; `"budget"`: a crop of the painted part and the box; `"none"`: the picture's name and the box. Or a mix: `{ original, marked, crop, box, size }` |
+| `around` | 300 | Characters of the text just before and after the selection |
+| `budget` | none | The most tokens the context may take; less text around, smaller pictures, then less unpainted text, until it fits |
+| `format` | `"markdown"` | `"markdown"` or `"json"` |
+| `pixels` | none | Your own way to get a picture's pixels, used when the page may not read them, such as a screenshot of the tab |
+| `color` | `#4b57f0` | The colour of the paint drawn on pictures |
+
+A picture from another site cannot be read where it is; it is loaded again with CORS, which most image services allow, and `pixels` covers the rest.
+An extension can take a screenshot of the tab with `chrome.tabs.captureVisibleTab` inside `brush.unmarked()`, which the `activeTab` permission allows.
+
+Paint is read the way a person means it.
+A single touch on a paragraph points at the paragraph, not at the word under the dab.
+A stroke down through a paragraph, which paints a word here and there on each line, points at the whole paragraph too.
+A stroke along words points at those words.
+
+The context also gives the page's title and address, and the headings above the selection.
+A table cell comes with its table's header row, code keeps its lines and its language, and a list item keeps its number.
+`estimateTokens(text)` and `imageTokens(width, height)` give the counts it uses.
+
+The defaults come from a test series: real questions about painted parts of test pages, answered by small and large models in every format.
+See [tests/eval/RESULTS.md](tests/eval/RESULTS.md).
+
+## Marks and notes
+
+Strokes made one after another form one mark.
+When the user gives the mark a note, the next stroke starts a new mark.
+Once there are two marks or a note, the brush shows each mark's number at the top left of its paint.
+
+`toContext()` then numbers the marks everywhere: `<mark id="2">` around the painted words of mark 2, `[Mark 2]` before an element that mark 2 covers as a whole, and each mark's number on the copy of a picture.
+The notes come last, by number, after the page: they are what the user asks for.
+
+The library has no note box of its own, so each project can ask for notes its own way.
+The example and the extension use [demo/note-bubble.ts](demo/note-bubble.ts): a box beside each stroke, where typing a letter starts the note and the brush's keys keep working.
+In the example it can also take the note by speech, through the browser's own speech recognition; in Chrome the audio goes to Google, in Edge to Microsoft.
+
+## The extension
 
 ```sh
 npm install
-npm run dev
-```
-
-Then open http://localhost:5199/.
-The tools start on.
-Press Escape to put them away and S to bring them back.
-
-On any site, with the try-it extension:
-
-```sh
 npm run build
 ```
 
 1. Open `chrome://extensions` or `edge://extensions`.
 2. Turn on Developer mode.
 3. Choose "Load unpacked" and pick the `extension` folder.
-4. On any page, click the extension's button or press Alt+Shift+S.
 
-## Keys
+The extension's button opens a small panel: start or stop the brush on the page, and see the trigger key, Alt+Shift+S by default.
+Change in the panel opens the browser's shortcut settings.
+It asks for no permissions beyond the page you start it on.
 
-The keys work while the tools are on.
+## The look
 
-| Key | Action |
+| Selected | Look |
 |---|---|
-| S, W, M, L, B, T | Smart select, magic wand, marquee, lasso, brush, text |
-| Shift, Alt, Shift+Alt | Add, subtract or intersect for the next click or drag |
-| [ and ] | Tolerance down and up, or brush size with the brush |
-| Q | Switch between ants and mask view |
-| Ctrl+A | Select all |
-| Ctrl+D, Ctrl+Shift+D | Deselect, reselect |
-| Ctrl+I | Invert |
-| Ctrl+Z, Ctrl+Y | Undo, redo |
-| Ctrl+C | Copy the selected text |
-| Enter | Tell the host page you are done (the `commit` event) |
-| Escape | Stop a drag, or put the tools away; the selection stays |
+| Text, code and buttons | The letters jitter: each one is nudged and turned a little, ten times a second, like a hand-drawn animation; code keeps its font, so its columns stay lined up |
+| A picture or a video | Pinned like a photo: a white edge, a soft shadow and a small tilt |
+| A picture in a box that clips it, such as a rounded card | Framed: a white edge inside it, with no tilt, so nothing is cut off |
 
-Ctrl+Shift+I would be Photoshop's key for Inverse, but browsers keep it for their developer tools.
-
-## Use it in code
-
-```ts
-import { createWebSelection } from "web-selection";
-
-const ws = createWebSelection({
-  exclude: (el) => el.matches("#my-panel"),
-});
-ws.enable();
-
-ws.on("change", (selection) => {
-  console.log(selection.stats, selection.text());
-});
-ws.on("commit", (selection) => {
-  for (const part of selection.parts) console.log(part.kind, part.whole, part.text);
-});
-
-ws.set({ tool: "marquee", tolerance: 30 });
-ws.run("mainText");
-ws.select(document.querySelector("article")!);
-```
-
-`selection.parts` gives each touched block with its element, its kind (heading, paragraph, list item, code, quote, cell, caption, term, media or text), whether all of it is selected, its text, and a DOM range.
-`selection.ranges()` gives live DOM ranges, one for each run.
-`selection.media` gives the selected pictures and videos.
-`selection.context()` gives the titles above the selection, outermost first, and the running text just before and after it in the same section.
-A tool that explains the selection can send this along, so the answer knows the topic without the whole page.
-
-Options:
-
-| Option | Meaning |
-|---|---|
-| `root` | Where to select. The default is the page body. |
-| `exclude` | Elements to leave out, with everything inside them. |
-| `palette` | Show the built-in tool bar. The default is true. |
-| `exitOnEscape` | Escape puts the tools away. The default is true. |
-| `shadowRoot` | How to reach shadow roots. An extension can pass `chrome.dom.openOrClosedShadowRoot` to reach closed ones. |
-| `tool`, `mode`, `reach`, `tolerance`, `contiguous`, `wholeBlocks`, `brushSize`, `brushBlocks`, `view` | Starting settings. The tool bar starts with smart select. |
-
-## How it works
-
-The page index walks the flat tree, so text in shadow roots and slots counts, and gives every visible character and picture a position in reading order.
-A selection is a set of runs over those positions: a one-dimensional mask, where Photoshop has a two-dimensional one.
-Add, subtract, intersect and invert are set operations on the runs.
-
-A block is the innermost box that lays out its own lines of text, or a picture large enough to stand alone.
-Each block has a look: its kind, type size, weight, font, colour, background, indent, list and table column.
-The wand compares looks the way Photoshop compares colours.
-As a guide, a tolerance of about 20 keeps to one kind of block, and about 40 takes most body text.
-
-The overlay is one element at the page's origin with a shadow root.
-It draws in page coordinates, so the outline scrolls with the page without being redrawn.
-Whole blocks are drawn as their boxes and partial text as solid line bands.
-A card, note, table, list or figure that is all selected is drawn as its own box.
-Blocks that follow each other are joined into one area with one outline.
-While the tools are on, a clear layer takes the pointer, so clicks select instead of opening links.
-
-The selection is kept as live DOM ranges, so it follows the page when the page changes.
-
-## Limits
-
-- Text inside cross-origin frames cannot be reached.
-- Text drawn on a canvas, as in Google Docs or a PDF viewer, has no characters to select.
-- Closed shadow roots need an accessor such as `chrome.dom.openOrClosedShadowRoot`.
-- Touch input works but is not tuned yet.
+The page's own letters stay where they are and only lose their fill; the brush draws them again on a canvas over the page.
+So nothing moves or wraps again, the words under the paint stay the words the user painted, and the page's elements are left as they are.
+When the system asks for less motion, the letters keep one jittered pose and do not move.
+The rest is plain CSS on attributes of the selected element, in one style sheet; clearing the paint takes them away.
 
 ## Development
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Playground at http://localhost:5199/ |
-| `npm run build` | The library in `dist`, and the script build in `extension` |
+| `npm run build` | Builds the library into `dist/` and the extension's scripts into `extension/` |
+| `npm run dev` | Rebuilds the extension on each change; reload it to try it |
+| `npm run example` | Serves the repo and opens the example |
+| `npm run fixtures` | Serves the repo; the test pages are at http://localhost:5199/tests/fixtures/article.html |
 | `npm run typecheck` | TypeScript in strict mode |
 | `npm test` | Unit tests (Vitest) |
-| `npm run e2e` | End-to-end tests in Chrome and Edge (Playwright) |
-| `npm run shots` | Screenshots of each tool on the playground |
-| `npm run shots:smart` | Screenshots of smart select on the playground |
+| `npm run e2e` | End-to-end tests in Chrome and Edge, and the real extension in Edge (Playwright) |
+| `npm run eval` | The test series: real questions about painted parts of test pages and of real sites, answered and graded by models; see [tests/eval/RESULTS.md](tests/eval/RESULTS.md) |
+| `npm run bench` | The benchmark: the brush used on 20 real sites with real mouse input, timed; see [tests/bench/RESULTS.md](tests/bench/RESULTS.md) |
+| `npm run shots` | Screenshots of the brush on a test page |
 | `npm run real` | Screenshots and timings on real sites |
+
+## Limits
+
+- Text inside cross-origin frames cannot be reached.
+- Paint does not move with the page when the layout changes, such as when the window is resized.
+- Paint over a box that scrolls on its own stays where it was painted when that box scrolls.
 
 ## License
 

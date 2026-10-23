@@ -6,7 +6,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: [["list"]],
   use: {
-    baseURL: "http://localhost:5199/",
+    baseURL: "http://localhost:5199/tests/fixtures/",
     viewport: { width: 1280, height: 900 },
     deviceScaleFactor: 1,
   },
@@ -15,8 +15,8 @@ export default defineConfig({
     { name: "edge", use: { channel: "msedge" } },
   ],
   webServer: {
-    command: "npx vite --port 5199 --strictPort",
-    url: "http://localhost:5199/",
+    command: "npx vite",
+    url: "http://localhost:5199/tests/fixtures/article.html",
     reuseExistingServer: true,
   },
 });
